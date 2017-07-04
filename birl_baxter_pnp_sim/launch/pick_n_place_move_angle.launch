@@ -1,0 +1,10 @@
+<?xml version="1.0" encoding="utf-8"?>
+<launch>
+
+
+  <!-- Start the Baxter pick and place demo -->
+  <node pkg="birl_baxter_pnp_sim" type="topic_multimodal.py" name="topic_multimodal" />
+  <node pkg="birl_baxter_pnp_sim" type="pick_n_place_srv_server.py" name="pick_n_place_srv_server" />
+  <node pkg="birl_baxter_pnp_sim" type="pick_n_place_srv_client_smach.py" name="pick_n_place_srv_client_smach" />
+  
+</launch>
