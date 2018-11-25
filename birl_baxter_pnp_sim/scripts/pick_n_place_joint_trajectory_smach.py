@@ -111,7 +111,7 @@ class Add_Box_Gazebo_Model(smach.State):
         srv_action_client.load_gazebo_models(model_name="box_female",
                            model_pose=Pose(position=Point(x=userdata.pick_object_pose.position.x,
                                                           y=userdata.pick_object_pose.position.y,
-                                                          z=-0.115),
+                                                          z=userdata.pick_object_pose.position.z),
                                            orientation=Quaternion(x=0,y=0,z=0,w=1)),
                            model_reference_frame="base")
         return 'Succeed'
@@ -139,6 +139,7 @@ class Go_to_Pick_Position(smach.State):
         traj.add_point(pick_angles, 10.0)
         traj.start()
         traj.wait(15.0)
+        rospy.sleep(1)
         traj.gripper_close()
         rospy.sleep(1)
         return 'Succeed'
@@ -172,6 +173,7 @@ class Go_to_Place_Position(smach.State):
         traj.add_point(place_angles, 15.0)
         traj.start()
         traj.wait(20.0)
+        rospy.sleep(1)
         traj.gripper_open()
         return 'Succeed'
         
@@ -195,7 +197,7 @@ def main():
 
     sm.userdata.sm_pick_object_pose = Pose()
     sm.userdata.sm_place_object_pose = Pose()
-    sm.userdata.sm_hover_distance = 0.15
+    sm.userdata.sm_hover_distance = 0.25
 
     global traj
     global limb_interface

@@ -34,6 +34,10 @@ from baxter_core_msgs.srv import (
     SolvePositionIK,
     SolvePositionIKRequest,
 )
+from trac_ik_baxter.srv import (
+    GetConstrainedPositionIK,
+    GetConstrainedPositionIKRequest,
+)
 from geometry_msgs.msg import (
     PoseStamped,
     Pose,
@@ -75,8 +79,11 @@ class Trajectory(object):
         self._verbose = verbose
         # enable the IK Service
         ik_ns = "ExternalTools/" + limb + "/PositionKinematicsNode/IKService"
+        tracik_name = '/trac_ik_'+limb
         self._iksvc = rospy.ServiceProxy(ik_ns, SolvePositionIK)
+        self._traciksvc = rospy.ServiceProxy(tracik_name, GetConstrainedPositionIK)
         rospy.wait_for_service(ik_ns, 5.0)
+        rospy.wait_for_service(tracik_name, 5.0)
         
         self._gripper = baxter_interface.Gripper(limb)
         self._rs = baxter_interface.RobotEnable(baxter_interface.CHECK_VERSION)
@@ -126,37 +133,51 @@ class Trajectory(object):
         self._gripper.close()
         rospy.sleep(1.0)
   
-    def ik_request(self,pose):
-        hdr = Header(stamp=rospy.Time.now(), frame_id='base')
-        ikreq = SolvePositionIKRequest()
-        ikreq.pose_stamp.append(PoseStamped(header=hdr, pose=pose))
-        try:
-            resp = self._iksvc(ikreq)
-        except (rospy.ServiceException, rospy.ROSException), e:
-            rospy.logerr("Service call failed: %s" % (e,))
-            return False
-        # Check if result valid, and type of seed ultimately used to get solution
-        # convert rospy's string representation of uint8[]'s to int's
-        resp_seeds = struct.unpack('<%dB' % len(resp.result_type), resp.result_type)
-        limb_joints = {}
-        if (resp_seeds[0] != resp.RESULT_INVALID):
-            seed_str = {
-                        ikreq.SEED_USER: 'User Provided Seed',
-                        ikreq.SEED_CURRENT: 'Current Joint Angles',
-                        ikreq.SEED_NS_MAP: 'Nullspace Setpoints',
-                       }.get(resp_seeds[0], 'None')
-            if self._verbose:
-                print("IK Solution SUCCESS - Valid Joint Solution Found from Seed Type: {0}".format(
-                         (seed_str)))
-            # Format solution into Limb API-compatible dictionary
-            limb_joints = dict(zip(resp.joints[0].name, resp.joints[0].position))
-            if self._verbose:
-                print("IK Joint Solution:\n{0}".format(limb_joints))
-                print("------------------")
-        else:
-            rospy.logerr("INVALID POSE - No Valid Joint Solution Found.")
-            return False
+    def ik_request(self,pose,method="trac_ik"):
+        if method == "kdl":
+            hdr = Header(stamp=rospy.Time.now(), frame_id='base')
+            ikreq = SolvePositionIKRequest()
+            ikreq.pose_stamp.append(PoseStamped(header=hdr, pose=pose))
+            try:
+                resp = self._iksvc(ikreq)
+            except (rospy.ServiceException, rospy.ROSException), e:
+                rospy.logerr("Service call failed: %s" % (e,))
+                return False
+            # Check if result valid, and type of seed ultimately used to get solution
+            # convert rospy's string representation of uint8[]'s to int's
+            resp_seeds = struct.unpack('<%dB' % len(resp.result_type), resp.result_type)
+            limb_joints = {}
+            if (resp_seeds[0] != resp.RESULT_INVALID):
+                seed_str = {
+                            ikreq.SEED_USER: 'User Provided Seed',
+                            ikreq.SEED_CURRENT: 'Current Joint Angles',
+                            ikreq.SEED_NS_MAP: 'Nullspace Setpoints',
+                        }.get(resp_seeds[0], 'None')
+                if self._verbose:
+                    print("IK Solution SUCCESS - Valid Joint Solution Found from Seed Type: {0}".format(
+                            (seed_str)))
+                # Format solution into Limb API-compatible dictionary
+                limb_joints = dict(zip(resp.joints[0].name, resp.joints[0].position))
+                if self._verbose:
+                    print("IK Joint Solution:\n{0}".format(limb_joints))
+                    print("------------------")
+            else:
+                rospy.logerr("INVALID POSE - No Valid Joint Solution Found.")
+                return False
 
+        elif method == "trac_ik":
+            hdr = Header(stamp=rospy.Time.now(), frame_id='base')
+            tracik_req = GetConstrainedPositionIK()
+            tracik_req.pose_stamp.append(PoseStamped(header=hdr, pose=pose))
+            try:
+                resp = self._iksvc(ikreq)
+            except (rospy.ServiceException, rospy.ROSException), e:
+                rospy.logerr("Service call failed: %s" % (e,))
+                return False            
+            if resp.isValid[0] != True
+                rospy.logerr("INVALID POSE - No Valid Joint Solution Found.")
+                return False        
+                
         limb_names = ['right_s0', 'right_s1', 'right_e0', 'right_e1', 'right_w0', 'right_w1', 'right_w2']
         limb_angles = [limb_joints[joint] for joint in limb_names]
         return limb_angles
