@@ -29,6 +29,13 @@ from geometry_msgs.msg import (
 )
 
 import ipdb
+import dill
+from  pnp_util import excute_dmp
+
+
+dir_of_this_script = os.path.dirname(os.path.realpath(__file__))
+dmp_model_dir = os.path.join(dir_of_this_script, '..', 'data', 'dmp_models')
+
 
 class Go_to_Start_Position(smach.State):
     def __init__(self):
@@ -41,15 +48,9 @@ class Go_to_Start_Position(smach.State):
         global traj
         global limb_interface
         current_angles = [limb_interface.joint_angle(joint) for joint in limb_interface.joint_names()]
-        starting_joint_angles = {'right_w0': -0.6699952259595108,
-                                 'right_w1': 1.030009435085784,
-                                 'right_w2': 0.4999997247485215,
-                                 'right_e0': -0.189968899785275,
-                                 'right_e1': 1.9400238130755056,
-                                 'right_s0': 0.08000397926829805,
-                                 'right_s1': -0.9999781166910306}
-        limb_names = ['right_s0', 'right_s1', 'right_e0', 'right_e1', 'right_w0', 'right_w1', 'right_w2']
-        starting_joint_order_angles = [starting_joint_angles[joint] for joint in limb_names]
+
+        starting_joint_order_angles = [0.3144660615165098, -0.7094661143970039, 0.4663301595171658, 
+        0.9234564343070191,-0.37160684586524145, 1.4066603824909245, -0.03259709174256504]
         traj.clear('right')
         traj.add_point(current_angles, 0.0)
         traj.add_point(starting_joint_order_angles, 5.0)
@@ -116,6 +117,29 @@ class Add_Box_Gazebo_Model(smach.State):
                            model_reference_frame="base")
         return 'Succeed'
 
+class Go_to_PrePick_Position(smach.State):
+    def __init__(self):
+        smach.State.__init__(self,
+                             outcomes=['Succeed','IK_Fail','Time_Out'],
+                             input_keys=['pick_object_pose','hover_distance'])
+        
+    def execute(self, userdata):
+        global limb
+        global traj
+        global limb_interface
+
+        pick_object_pose = copy.deepcopy(userdata.pick_object_pose)
+        hover_pick_object_pose = copy.deepcopy(pick_object_pose)
+        hover_pick_object_pose.position.z = hover_pick_object_pose.position.z + userdata.hover_distance
+        start = get_current_pose()
+        end = hover_pick_object_pose
+        dmp_model = dill.load(open(os.path.join(dmp_model_dir, 'home_to_pre_pick'), 'r'))
+        excute_dmp(start,end,dmp_model,traj,limb_interface)
+        rospy.sleep(1)
+        traj.gripper_open()
+        rospy.sleep(1)
+        return 'Succeed'
+
 class Go_to_Pick_Position(smach.State):
     def __init__(self):
         smach.State.__init__(self,
@@ -127,56 +151,111 @@ class Go_to_Pick_Position(smach.State):
         global traj
         global limb_interface
         
-        current_angles = [limb_interface.joint_angle(joint) for joint in limb_interface.joint_names()]
         pick_object_pose = copy.deepcopy(userdata.pick_object_pose)
-        hover_pick_object_pose = copy.deepcopy(pick_object_pose)
-        hover_pick_object_pose.position.z = hover_pick_object_pose.position.z + userdata.hover_distance
-        hover_pick_angles = traj.ik_request(hover_pick_object_pose)
-        pick_angles = traj.ik_request(pick_object_pose)
-        traj.clear('right')
-        traj.add_point(current_angles, 0.0)
-        traj.add_point(hover_pick_angles, 5.0)
-        traj.add_point(pick_angles, 10.0)
-        traj.start()
-        traj.wait(15.0)
+        start = get_current_pose()
+        end = pick_object_pose
+        dmp_model = dill.load(open(os.path.join(dmp_model_dir, 'pick_to_pre_pick'), 'r'))
+        excute_dmp(start,end,dmp_model,traj,limb_interface)
         rospy.sleep(1)
         traj.gripper_close()
         rospy.sleep(1)
         return 'Succeed'
 
-class Go_to_Place_Position(smach.State):
+class MoveToPrePickPoseWithClosedHand(smach.State):
     def __init__(self):
         smach.State.__init__(self,
                              outcomes=['Succeed','IK_Fail','Time_Out'],
-                             input_keys=['pick_object_pose','place_object_pose','hover_distance'])
+                             input_keys=['pick_object_pose','hover_distance'])
         
     def execute(self, userdata):
         global limb
         global traj
         global limb_interface
         
-        current_angles = [limb_interface.joint_angle(joint) for joint in limb_interface.joint_names()]
         pick_object_pose = copy.deepcopy(userdata.pick_object_pose)
-        hover_pick_object_pose = copy.deepcopy(userdata.pick_object_pose)
-        hover_pick_object_pose.position.z = pick_object_pose.position.z + userdata.hover_distance
+        pick_object_pose = copy.deepcopy(userdata.pick_object_pose)
+        hover_pick_object_pose = copy.deepcopy(pick_object_pose)
+
+        start = get_current_pose()
+        end = hover_pick_object_pose.position.z + userdata.hover_distance
+
+        dmp_model = dill.load(open(os.path.join(dmp_model_dir, 'pick_to_pre_pick'), 'r'))
+        excute_dmp(start,end,dmp_model,traj,limb_interface)
+        return 'Succeed'
+
+class Go_to_PrePlace_Position(smach.State):
+    def __init__(self):
+        smach.State.__init__(self,
+                             outcomes=['Succeed','IK_Fail','Time_Out'],
+                             input_keys=['place_object_pose','hover_distance'])
+        
+    def execute(self, userdata):
+        global limb
+        global traj
+        global limb_interface
+        
         place_object_pose = copy.deepcopy(userdata.place_object_pose)
         hover_place_object_pose = copy.deepcopy(place_object_pose)
         hover_place_object_pose.position.z = hover_place_object_pose.position.z + userdata.hover_distance
-        hover_pick_angles = traj.ik_request(hover_pick_object_pose)
-        hover_place_angles = traj.ik_request(hover_place_object_pose)
-        pick_angles = traj.ik_request(pick_object_pose)
-        place_angles = traj.ik_request(place_object_pose)
-        traj.clear('right')
-        traj.add_point(current_angles, 0.0)
-        traj.add_point(hover_pick_angles, 5.0)
-        traj.add_point(hover_place_angles, 10.0)
-        traj.add_point(place_angles, 15.0)
-        traj.start()
-        traj.wait(20.0)
+        start = get_current_pose()
+        end = hover_place_object_pose
+        dmp_model = dill.load(open(os.path.join(dmp_model_dir, 'pre_pick_to_pre_place'), 'r'))
+        excute_dmp(start,end,dmp_model,traj,limb_interface)
+        return 'Succeed'
+
+
+class Go_to_Place_Position(smach.State):
+    def __init__(self):
+        smach.State.__init__(self,
+                             outcomes=['Succeed','IK_Fail','Time_Out'],
+                             input_keys=['place_object_pose','hover_distance'])
+        
+    def execute(self, userdata):
+        global limb
+        global traj
+        global limb_interface
+        
+        place_object_pose = copy.deepcopy(userdata.place_object_pose)
+        start = get_current_pose()
+        end = place_object_pose
+        dmp_model = dill.load(open(os.path.join(dmp_model_dir, 'pre_place_to_place'), 'r'))
+        excute_dmp(start,end,dmp_model,traj,limb_interface)
         rospy.sleep(1)
         traj.gripper_open()
         return 'Succeed'
+
+class MoveToPrePlacePoseWithOpenHand(smach.State):
+    def __init__(self):
+        smach.State.__init__(self,
+                             outcomes=['Succeed','IK_Fail','Time_Out'],
+                             input_keys=['place_object_pose','hover_distance'])
         
+    def execute(self, userdata):
+        global limb
+        global traj
+        global limb_interface
+        place_object_pose = copy.deepcopy(userdata.place_object_pose)
+        hover_place_object_pose = copy.deepcopy(place_object_pose)
+        hover_place_object_pose.position.z = hover_place_object_pose.position.z + userdata.hover_distance
+        start = get_current_pose()
+        end = hover_place_object_pose
+        dmp_model = dill.load(open(os.path.join(dmp_model_dir, 'place_to_pre_place'), 'r'))
+        excute_dmp(start,end,dmp_model,traj,limb_interface)
+        return 'Succeed'
+
+
+def get_current_pose():
+    global limb_interface
+    current_pose_dic = limb_interface.endpoint_pose()
+    current_pose_list = [ current_pose_dic['position'].x, 
+                    current_pose_dic['position'].y,
+                    current_pose_dic['position'].z,
+                    current_pose_dic['orientation'].x,
+                    current_pose_dic['orientation'].y,
+                    current_pose_dic['orientation'].z,
+                    current_pose_dic['orientation'].w]  
+    return current_pose_list
+
 def shutdown():
     global limb
     global traj
@@ -197,7 +276,7 @@ def main():
 
     sm.userdata.sm_pick_object_pose = Pose()
     sm.userdata.sm_place_object_pose = Pose()
-    sm.userdata.sm_hover_distance = 0.25
+    sm.userdata.sm_hover_distance = 0.15
 
     global traj
     global limb_interface
@@ -215,24 +294,52 @@ def main():
                                remapping={'pick_object_pose':'sm_pick_object_pose',
                                'place_object_pose':'sm_place_object_pose'})
         smach.StateMachine.add('Add_Box_Gazebo_Model',Add_Box_Gazebo_Model(),
-                               transitions={'Succeed':'Go_to_Pick_Position'},
+                               transitions={'Succeed':'Go_to_PrePick_Position'},
                                remapping={'pick_object_pose':'sm_pick_object_pose'})
-                               
+
+        smach.StateMachine.add('Go_to_PrePick_Position',Go_to_PrePick_Position(),
+                               transitions={'Succeed':'Go_to_Pick_Position',
+                                            'IK_Fail':'Go_to_Start_Position',
+                                            'Time_Out':'Go_to_Start_Position'},
+                               remapping={'pick_object_pose':'sm_pick_object_pose',
+                                          'hover_distance':'sm_hover_distance'})      
+
         smach.StateMachine.add('Go_to_Pick_Position',Go_to_Pick_Position(),
-                               transitions={'Succeed':'Go_to_Place_Position',
+                               transitions={'Succeed':'MoveToPrePickPoseWithClosedHand',
                                             'IK_Fail':'Go_to_Start_Position',
                                             'Time_Out':'Go_to_Start_Position'},
                                remapping={'pick_object_pose':'sm_pick_object_pose',
                                           'hover_distance':'sm_hover_distance'})
 
-        smach.StateMachine.add('Go_to_Place_Position',Go_to_Place_Position(),
-                               transitions={'Succeed':'Done',
+        smach.StateMachine.add('MoveToPrePickPoseWithClosedHand',MoveToPrePickPoseWithClosedHand(),
+                               transitions={'Succeed':'Go_to_PrePlace_Positionn',
+                                            'IK_Fail':'Go_to_Start_Position',
+                                            'Time_Out':'Go_to_Start_Position'},
+                               remapping={'pick_object_pose':'sm_pick_object_pose',
+                                          'hover_distance':'sm_hover_distance'})
+
+        smach.StateMachine.add('Go_to_PrePlace_Position',Go_to_PrePlace_Position(),
+                               transitions={'Succeed':'Go_to_Place_Position',
                                             'IK_Fail':'Go_to_Start_Position',
                                             'Time_Out':'Go_to_Start_Position'},
                                remapping={'place_object_pose':'sm_place_object_pose',
                                           'pick_object_pose':'sm_pick_object_pose',
                                           'hover_distance':'sm_hover_distance'})
-  
+
+        smach.StateMachine.add('Go_to_Place_Position',Go_to_Place_Position(),
+                               transitions={'Succeed':'MoveToPrePlacePoseWithOpenHand',
+                                            'IK_Fail':'Go_to_Start_Position',
+                                            'Time_Out':'Go_to_Start_Position'},
+                               remapping={'place_object_pose':'sm_place_object_pose',
+                                          'pick_object_pose':'sm_pick_object_pose',
+                                          'hover_distance':'sm_hover_distance'})
+        smach.StateMachine.add('MoveToPrePlacePoseWithOpenHand',MoveToPrePlacePoseWithOpenHand(),
+                               transitions={'Succeed':'Done',
+                                            'IK_Fail':'Go_to_Start_Position',
+                                            'Time_Out':'Go_to_Start_Position'},
+                               remapping={'place_object_pose':'sm_place_object_pose',
+                                          'pick_object_pose':'sm_pick_object_pose',
+                                          'hover_distance':'sm_hover_distance'})                                            
     sis = smach_ros.IntrospectionServer('MY_SERVER', sm, '/SM_ROOT')
 
     sis.start()
