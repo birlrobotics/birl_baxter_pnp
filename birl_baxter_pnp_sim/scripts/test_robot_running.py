@@ -25,7 +25,7 @@ def main():
     rospy.init_node("test_robot_running")
     # rospy.wait_for_message("/robot/sim/started", Empty)
     limb = 'right'
-    # ipdb.set_trace()
+    ipdb.set_trace()
     traj = srv_action_client.Trajectory(limb)
     global limb_interface
     limb_interface = baxter_interface.limb.Limb(limb)
@@ -45,7 +45,7 @@ def main():
     hover_distance = 0.15
     hover_pick_object_pose.position.z = hover_pick_object_pose.position.z + hover_distance
     
-    start = [0.81421265, -0.45082216,  0.0866994 ,  0.99948816, -0.02984393,0.005424  ,  0.01016594]
+    start = [0.81421265, -0.45082216,  0.0866994 ,  0.99948816, -0.02984393,0.005424  ,0.01016594]
     end = [0.77519381, -0.09838225, -0.00453884,  0.98071834,  0.19285799,0.01934342, 0.0249633]
     dmp_model = dill.load(open(os.path.join(dmp_model_dir, 'home_to_pre_pick'), 'r'))
     command_matrix = generalize_via_dmp(start, end, dmp_model)

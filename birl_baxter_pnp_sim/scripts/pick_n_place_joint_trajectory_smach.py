@@ -30,7 +30,8 @@ from geometry_msgs.msg import (
 
 import ipdb
 import dill
-from  pnp_util import excute_dmp
+from  pnp_util import get_dmp_joint_plan
+import os
 
 
 dir_of_this_script = os.path.dirname(os.path.realpath(__file__))
@@ -131,12 +132,11 @@ class Go_to_PrePick_Position(smach.State):
         pick_object_pose = copy.deepcopy(userdata.pick_object_pose)
         hover_pick_object_pose = copy.deepcopy(pick_object_pose)
         hover_pick_object_pose.position.z = hover_pick_object_pose.position.z + userdata.hover_distance
-        start = get_current_pose()
-        end = hover_pick_object_pose
+        start = get_current_pose_list()
+        end = get_end_pose_list(hover_pick_object_pose)
         dmp_model = dill.load(open(os.path.join(dmp_model_dir, 'home_to_pre_pick'), 'r'))
-        excute_dmp(start,end,dmp_model,traj,limb_interface)
-        rospy.sleep(1)
-        traj.gripper_open()
+        dmp_angle_plan = get_dmp_joint_plan(start,end,dmp_model,limb)
+        run_traj(dmp_angle_plan)
         rospy.sleep(1)
         return 'Succeed'
 
@@ -152,10 +152,11 @@ class Go_to_Pick_Position(smach.State):
         global limb_interface
         
         pick_object_pose = copy.deepcopy(userdata.pick_object_pose)
-        start = get_current_pose()
-        end = pick_object_pose
+        start = get_current_pose_list()
+        end = get_end_pose_list(pick_object_pose)
         dmp_model = dill.load(open(os.path.join(dmp_model_dir, 'pick_to_pre_pick'), 'r'))
-        excute_dmp(start,end,dmp_model,traj,limb_interface)
+        dmp_angle_plan = get_dmp_joint_plan(start,end,dmp_model,limb)
+        run_traj(dmp_angle_plan)
         rospy.sleep(1)
         traj.gripper_close()
         rospy.sleep(1)
@@ -173,14 +174,15 @@ class MoveToPrePickPoseWithClosedHand(smach.State):
         global limb_interface
         
         pick_object_pose = copy.deepcopy(userdata.pick_object_pose)
-        pick_object_pose = copy.deepcopy(userdata.pick_object_pose)
         hover_pick_object_pose = copy.deepcopy(pick_object_pose)
+        hover_pick_object_pose.position.z = hover_pick_object_pose.position.z + userdata.hover_distance
 
-        start = get_current_pose()
-        end = hover_pick_object_pose.position.z + userdata.hover_distance
+        start = get_current_pose_list()
+        end = get_end_pose_list(hover_pick_object_pose)
 
         dmp_model = dill.load(open(os.path.join(dmp_model_dir, 'pick_to_pre_pick'), 'r'))
-        excute_dmp(start,end,dmp_model,traj,limb_interface)
+        dmp_angle_plan = get_dmp_joint_plan(start,end,dmp_model,limb)
+        run_traj(dmp_angle_plan)
         return 'Succeed'
 
 class Go_to_PrePlace_Position(smach.State):
@@ -197,10 +199,11 @@ class Go_to_PrePlace_Position(smach.State):
         place_object_pose = copy.deepcopy(userdata.place_object_pose)
         hover_place_object_pose = copy.deepcopy(place_object_pose)
         hover_place_object_pose.position.z = hover_place_object_pose.position.z + userdata.hover_distance
-        start = get_current_pose()
-        end = hover_place_object_pose
+        start = get_current_pose_list()
+        end = get_end_pose_list(hover_place_object_pose)
         dmp_model = dill.load(open(os.path.join(dmp_model_dir, 'pre_pick_to_pre_place'), 'r'))
-        excute_dmp(start,end,dmp_model,traj,limb_interface)
+        dmp_angle_plan = get_dmp_joint_plan(start,end,dmp_model,limb)
+        run_traj(dmp_angle_plan)
         return 'Succeed'
 
 
@@ -216,10 +219,11 @@ class Go_to_Place_Position(smach.State):
         global limb_interface
         
         place_object_pose = copy.deepcopy(userdata.place_object_pose)
-        start = get_current_pose()
-        end = place_object_pose
+        start = get_current_pose_list()
+        end = get_end_pose_list(place_object_pose)
         dmp_model = dill.load(open(os.path.join(dmp_model_dir, 'pre_place_to_place'), 'r'))
-        excute_dmp(start,end,dmp_model,traj,limb_interface)
+        dmp_angle_plan = get_dmp_joint_plan(start,end,dmp_model,limb)
+        run_traj(dmp_angle_plan)
         rospy.sleep(1)
         traj.gripper_open()
         return 'Succeed'
@@ -237,14 +241,15 @@ class MoveToPrePlacePoseWithOpenHand(smach.State):
         place_object_pose = copy.deepcopy(userdata.place_object_pose)
         hover_place_object_pose = copy.deepcopy(place_object_pose)
         hover_place_object_pose.position.z = hover_place_object_pose.position.z + userdata.hover_distance
-        start = get_current_pose()
-        end = hover_place_object_pose
+        start = get_current_pose_list()
+        end = get_end_pose_list(hover_place_object_pose)
         dmp_model = dill.load(open(os.path.join(dmp_model_dir, 'place_to_pre_place'), 'r'))
-        excute_dmp(start,end,dmp_model,traj,limb_interface)
+        dmp_angle_plan = get_dmp_joint_plan(start,end,dmp_model,limb)
+        run_traj(dmp_angle_plan)
         return 'Succeed'
 
 
-def get_current_pose():
+def get_current_pose_list():
     global limb_interface
     current_pose_dic = limb_interface.endpoint_pose()
     current_pose_list = [ current_pose_dic['position'].x, 
@@ -255,6 +260,34 @@ def get_current_pose():
                     current_pose_dic['orientation'].z,
                     current_pose_dic['orientation'].w]  
     return current_pose_list
+
+def get_end_pose_list(pose):
+    pose_list = [ pose.position.x, 
+                        pose.position.y,
+                        pose.position.z,
+                        pose.orientation.x,
+                        pose.orientation.y,
+                        pose.orientation.z,
+                        pose.orientation.w]  
+    return pose_list
+
+def run_traj(dmp_angle_plan,t_step=0.3):
+    global traj,limb_interface
+    end_command = dict(zip(dmp_angle_plan.joints[-1].name,dmp_angle_plan.joints[0].position))
+    # limb_interface.move_to_joint_positions(end_command)
+    current_angles = [limb_interface.joint_angle(joint) for joint in limb_interface.joint_names()]
+    traj.clear(limb)
+    traj.add_point(current_angles,0.0)
+    for idx in range(len(dmp_angle_plan.isValid)):
+        if dmp_angle_plan.isValid[idx] == False:
+            rospy.loginfo("no valid ik")
+            continue
+        else: 
+            
+            wait_time = t_step*idx
+            traj.add_point(dmp_angle_plan.joints[idx].position,wait_time)
+    traj.start()
+    traj.wait(wait_time)
 
 def shutdown():
     global limb
@@ -312,7 +345,7 @@ def main():
                                           'hover_distance':'sm_hover_distance'})
 
         smach.StateMachine.add('MoveToPrePickPoseWithClosedHand',MoveToPrePickPoseWithClosedHand(),
-                               transitions={'Succeed':'Go_to_PrePlace_Positionn',
+                               transitions={'Succeed':'Go_to_PrePlace_Position',
                                             'IK_Fail':'Go_to_Start_Position',
                                             'Time_Out':'Go_to_Start_Position'},
                                remapping={'pick_object_pose':'sm_pick_object_pose',

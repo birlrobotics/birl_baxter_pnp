@@ -13,7 +13,9 @@ limb_names = ['right_s0', 'right_s1', 'right_e0', 'right_e1', 'right_w0', 'right
 
 def convert_pose_to_joint_plan(dmp_pose_plan,limb):
     service_name = "/trac_ik_"+limb
-    rospy.wait_for_service(service_name,timeout=5)
+    # ipdb.set_trace()
+    server_up = rospy.wait_for_service(service_name,timeout=5)
+    
     ik_client = rospy.ServiceProxy(service_name, GetConstrainedPositionIK)
     req = GetConstrainedPositionIKRequest()
     for row in dmp_pose_plan:
@@ -30,26 +32,15 @@ def convert_pose_to_joint_plan(dmp_pose_plan,limb):
     res = ik_client(req)  
     return res
 
-def add_points_to_traj(res,traj,t_step = 0.2):    
-    for idx in range(len(res.isValid)):
-        if res.isValid[idx] == False:
-            # raise "Have invalid pose"
-            continue
-        else: 
-            wait_time = t_step*idx
-            traj.add_point(res.joints[idx].position,wait_time)
-    return traj,wait_time
-
-        
 
 
 def main():
-    rospy.init_node("test_trac_ik.py")
+    rospy.init_node("test_trac_ik_py")
     limb = "right"
     dir_of_this_script = os.path.dirname(os.path.realpath(__file__))
     demonstration_dir = os.path.join(dir_of_this_script, '..', 'data', 'demonstrations')
     home_to_pre_pick = np.load(open(os.path.join(demonstration_dir, 'home_to_pre_pick.npy'), 'r'))
-    ipdb.set_trace()
+    # ipdb.set_trace()
     dmp_pose_plan = home_to_pre_pick
     convert_pose_to_joint_plan(dmp_pose_plan,limb)
 
