@@ -6,19 +6,21 @@ from geometry_msgs.msg import (
     Quaternion,
 )
 from trac_ik_baxter.srv import GetConstrainedPositionIK,GetConstrainedPositionIKRequest
+from sensor_msgs.msg import JointState
 import numpy as np
 import os, sys
-import ipdb
-limb_names = ['right_s0', 'right_s1', 'right_e0', 'right_e1', 'right_w0', 'right_w1', 'right_w2']
 
-def convert_pose_to_joint_plan(dmp_pose_plan,limb):
+import ipdb
+
+
+def convert_pose_to_joint_plan(dmp_pose_plan,limb="right"):
     service_name = "/trac_ik_"+limb
-    # ipdb.set_trace()
     server_up = rospy.wait_for_service(service_name,timeout=5)
     
     ik_client = rospy.ServiceProxy(service_name, GetConstrainedPositionIK)
     req = GetConstrainedPositionIKRequest()
-    for row in dmp_pose_plan:
+    jointstate_list = [] 
+    for idx, row in enumerate(dmp_pose_plan):
         test_point = PoseStamped()
         test_point.pose.position.x = row[0]
         test_point.pose.position.y = row[1]
@@ -27,10 +29,21 @@ def convert_pose_to_joint_plan(dmp_pose_plan,limb):
         test_point.pose.orientation.y = row[4]
         test_point.pose.orientation.z = row[5]
         test_point.pose.orientation.w = row[6]
-        req.pose_stamp.append(test_point)             
+        req.pose_stamp.append(test_point) 
+                    
+        res = ik_client(req)  
+        if res.isValid[0] == False:
+            continue
+        else:
+            req = GetConstrainedPositionIKRequest()
+            seed = JointState()
+            seed.position = res.joints[0].position
+            seed.name = res.joints[0].name
+            req.seed_angles.append(seed)
+            jointstate_list.append(res.joints[0].position)
+            
+    return jointstate_list
 
-    res = ik_client(req)  
-    return res
 
 
 
@@ -42,7 +55,10 @@ def main():
     home_to_pre_pick = np.load(open(os.path.join(demonstration_dir, 'home_to_pre_pick.npy'), 'r'))
     # ipdb.set_trace()
     dmp_pose_plan = home_to_pre_pick
-    convert_pose_to_joint_plan(dmp_pose_plan,limb)
+    joint_state = convert_pose_to_joint_plan(dmp_pose_plan,limb)
+
+    print "Done"
+    
 
 if __name__ == '__main__':
     sys.exit(main())

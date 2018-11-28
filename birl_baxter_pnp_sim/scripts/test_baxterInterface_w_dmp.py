@@ -1,6 +1,5 @@
 import rospy
 import baxter_interface
-from  pnp_util import get_dmp_joint_plan
 from arm_move import srv_action_client
 import os, sys
 import dill
@@ -9,6 +8,7 @@ import ipdb
 
 limb_interface = None
 traj = None
+limb = 'right'
 dir_of_this_script = os.path.dirname(os.path.realpath(__file__))
 dmp_model_dir = os.path.join(dir_of_this_script, '..', 'data', 'dmp_models')
 pick_pose_list = [0.7,-0.4,-0.2,0,1,0,0]
@@ -22,20 +22,18 @@ start_pose = dict(zip(limb_names,starting_joint_order_angles))
 def main():
     rospy.init_node("test_baxter_interface_w_dmp")   
     
-    global limb_interface,traj,limb
-    limb = 'right'
-    # ipdb.set_trace()
-    
+    global traj,limb_interface
     limb_interface = baxter_interface.limb.Limb(limb)
     limb_interface.move_to_joint_positions(start_pose)
+
     traj = srv_action_client.Trajectory(limb)
     current_pose = get_current_pose_list()
     # start = get_current_pose_list()
     # end = pick_pose_list
     start = None
     end = None    
-    dmp_model = dill.load(open(os.path.join(dmp_model_dir, 'home_to_pre_pick'), 'r'))
-    # ipdb.set_trace()
+    dmp_model = dill.load(open(os.path.join(dmp_model_dir, 'pre_pick_to_pick'), 'r'))
+    ipdb.set_trace()
     dmp_angle_plan = get_dmp_joint_plan(start,end,dmp_model,limb)
     
     run_traj(dmp_angle_plan)
