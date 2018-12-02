@@ -9,7 +9,7 @@ import rospy
 import rospkg
 import copy
 import struct
-
+import numpy as np
 import actionlib
 
 from birl_sim_examples.srv import *
@@ -85,20 +85,27 @@ class Trajectory(object):
             print("Enabling robot... ")
             self._rs.enable()
 
-    def find_start_offset(self,start_angle, cur_angle):
-        #create empty lists
-        dflt_vel = []
-        _param_ns = '/rsdk_joint_trajectory_action_server/'
-        vel_param = _param_ns + "%s_default_velocity"
-        joint_names = ['right_s0', 'right_s1', 'right_e0', 'right_e1', 'right_w0', 'right_w1', 'right_w2'] 
-        for name in joint_names:
-            prm = rospy.get_param(vel_param % name, 0.25)
-            dflt_vel.append(prm)
+    def find_start_offset(self,start_angle, cur_angle,speed):
+        dflt_vel = [speed] * 7
         diffs = map(operator.sub, start_angle, cur_angle)
         diffs = map(operator.abs, diffs)
         #determine the largest time offset necessary across all joints
         t_offset = max(map(operator.div, diffs, dflt_vel))
         return t_offset
+
+    def find_offset(self, dmp_angle_plans,speed):
+        dflt_vel = [speed]*7
+        mat = np.array(dmp_angle_plans)
+        last = mat[0]
+        new_mat = [last]
+        t_offset = []
+        for idx in range(mat.shape[0]):
+            diffs = map(operator.sub, mat[idx], last)
+            diffs = map(operator.abs, diffs)
+            t_offset_ = max(map(operator.div, diffs, dflt_vel))
+            last = mat[idx]
+            t_offset.append(t_offset_)
+        return np.array(t_offset).cumsum()
 
     def add_point(self, positions, time):
         point = JointTrajectoryPoint()
@@ -192,18 +199,20 @@ def hmm_state_switch_client(state):
 
 
 def robot_run_trajectory(limb,dmp_command_angle):
+    _speed = 0.25
     start_angle = dmp_command_angle[0]  
     traj = Trajectory(limb)
-    limb_interface = traj._limb
+    limb_interface = traj._limb 
     cur_angle = [limb_interface.joint_angle(joint) for joint in limb_interface.joint_names()]
-    start_wait_time = traj.find_start_offset(start_angle,cur_angle)
+    start_wait_time = traj.find_start_offset(start_angle,cur_angle,speed=_speed)
+    traj_wait_time = traj.find_offset(dmp_command_angle,speed=_speed)
     traj.clear(limb)
     traj.add_point(cur_angle, 0.0)
     traj.add_point(start_angle,start_wait_time) 
     traj.start()
     traj.wait(start_wait_time)
     for idx, command in enumerate(dmp_command_angle):
-        wait_time =  t_step * idx
+        wait_time =  traj_wait_time[idx]
         traj.add_point(command,wait_time)
     traj.start()
     traj.wait(wait_time)
