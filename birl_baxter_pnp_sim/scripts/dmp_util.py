@@ -1,5 +1,7 @@
 import numpy
 import ipdb
+from trac_ik_solver import convert_pose_to_joint_plan
+from quaternion_interpolation import interpolate_pose_using_slerp
 
 def filter_static_points(mat):
     last = mat[0]
@@ -44,3 +46,11 @@ def generalize_via_dmp_no_start_end(model,plot=True):
     y_track, dy_track, ddy_track = new_dmp.rollout(tau=1)
 
     return y_track
+
+def get_dmp_joint_plan(start, end, demo,limb):
+    demo = filter_static_points(demo)
+    dmp_model = get_dmp_model(demo)
+    command_matrix = generalize_via_dmp(start, end, dmp_model) 
+    command_matrix = interpolate_pose_using_slerp(command_matrix)
+    dmp_angle_plan = convert_pose_to_joint_plan(command_matrix,limb)
+    return dmp_angle_plan

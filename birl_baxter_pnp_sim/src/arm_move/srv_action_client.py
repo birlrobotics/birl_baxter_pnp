@@ -52,6 +52,7 @@ from gazebo_msgs.srv import (
 
 import baxter_interface
 
+
 class Trajectory(object):
     def __init__(self, limb,verbose = False):
         # set up the action client
@@ -88,8 +89,9 @@ class Trajectory(object):
         self._gripper = baxter_interface.Gripper(limb)
         self._rs = baxter_interface.RobotEnable(baxter_interface.CHECK_VERSION)
         self._init_state = self._rs.state().enabled
-        print("Enabling robot... ")
-        self._rs.enable()
+        if self._init_state != True:
+            print("Enabling robot... ")
+            self._rs.enable()
 
 
     def add_point(self, positions, time):

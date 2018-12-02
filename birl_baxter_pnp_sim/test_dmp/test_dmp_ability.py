@@ -4,8 +4,8 @@ import numpy as np
 
 
 dir_of_this_script = os.path.dirname(os.path.realpath(__file__))
-demonstration_dir = os.path.join(dir_of_this_script, '..', 'data', 'demonstrations')
-demo = np.load(open(os.path.join(demonstration_dir, 'home_to_pre_pick.npy'), 'r'))
+demonstration_dir = os.path.join(dir_of_this_script, '..', 'data', 'new_demo')
+demo = np.load(open(os.path.join(demonstration_dir, 'move_to_hover_position.npy'), 'r'))
 
 orig_start = demo[0]
 orig_end = demo[-1]
@@ -32,15 +32,9 @@ ax = fig.gca(projection='3d')
 ax.plot(y_track_1[:,0],y_track_1[:,1],y_track_1[:,2])
 ax.set_xlabel("x")
 ax.set_ylabel("y")
-ax.set_title("orig_start_end")
+ax.set_title("dmp_orig_start_end")
 
 
-fig = plt.figure(3)
-ax = fig.gca(projection='3d')
-ax.plot(y_track_2[:,0],y_track_2[:,1],y_track_2[:,2])
-ax.set_xlabel("x")
-ax.set_ylabel("y")
-ax.set_title("no_start_end")
 plt.show()
 
 
