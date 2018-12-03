@@ -45,7 +45,7 @@ from gazebo_msgs.srv import (
 import operator
 import baxter_interface
 import ipdb
-from _constant import t_step
+from _constant import robot_runing_speed
 
 class Trajectory(object):
     def __init__(self, limb,verbose = False):
@@ -199,13 +199,12 @@ def hmm_state_switch_client(state):
 
 
 def robot_run_trajectory(limb,dmp_command_angle):
-    _speed = 0.25
     start_angle = dmp_command_angle[0]  
     traj = Trajectory(limb)
     limb_interface = traj._limb 
     cur_angle = [limb_interface.joint_angle(joint) for joint in limb_interface.joint_names()]
-    start_wait_time = traj.find_start_offset(start_angle,cur_angle,speed=_speed)
-    traj_wait_time = traj.find_offset(dmp_command_angle,speed=_speed)
+    start_wait_time = traj.find_start_offset(start_angle,cur_angle,speed=robot_runing_speed)
+    traj_wait_time = traj.find_offset(dmp_command_angle,speed=robot_runing_speed)
     traj.clear(limb)
     traj.add_point(cur_angle, 0.0)
     traj.add_point(start_angle,start_wait_time) 

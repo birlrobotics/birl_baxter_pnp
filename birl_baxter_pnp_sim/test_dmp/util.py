@@ -22,11 +22,3 @@ def generalize_via_dmp(start, end, model,plot=True):
 
     return y_track
         
-def generalize_via_dmp_no_start_end(model,plot=True):
-    import pydmps
-    import ipdb
-    new_dmp = pydmps.dmp_discrete.DMPs_discrete(n_dmps=model.n_dmps, n_bfs=model.n_bfs, ay=model.ay, w=model.w)  
-
-    y_track, dy_track, ddy_track = new_dmp.rollout(tau=1)
-
-    return y_track

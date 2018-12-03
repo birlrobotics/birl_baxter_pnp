@@ -1,19 +1,16 @@
-from util import get_dmp_model, generalize_via_dmp,generalize_via_dmp_no_start_end
+from util import get_dmp_model, generalize_via_dmp
 import os
 import numpy as np
 
 
 dir_of_this_script = os.path.dirname(os.path.realpath(__file__))
-demonstration_dir = os.path.join(dir_of_this_script, '..', 'data', 'new_demo')
+demonstration_dir = os.path.join(dir_of_this_script, '..', 'dmp_data', 'new_demo')
 demo = np.load(open(os.path.join(demonstration_dir, 'move_to_hover_position.npy'), 'r'))
 
 orig_start = demo[0]
 orig_end = demo[-1]
 dmp_model_1 = get_dmp_model(demo)
 y_track_1 = generalize_via_dmp(start=orig_start,end=orig_end,model=dmp_model_1)
-
-dmp_model_2 = get_dmp_model(demo)
-y_track_2 = generalize_via_dmp_no_start_end(model=dmp_model_2)
 
 
 from mpl_toolkits.mplot3d import Axes3D
