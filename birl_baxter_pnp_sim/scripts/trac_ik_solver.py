@@ -9,7 +9,8 @@ from trac_ik_baxter.srv import GetConstrainedPositionIK,GetConstrainedPositionIK
 from sensor_msgs.msg import JointState
 import numpy as np
 import os, sys
-
+from joint_action_client import get_current_angle
+from _constant import limb_name
 import ipdb
 
 
@@ -30,7 +31,13 @@ def convert_pose_to_joint_plan(dmp_pose_plan,limb="right"):
         test_point.pose.orientation.z = row[5]
         test_point.pose.orientation.w = row[6]
         req.pose_stamp.append(test_point) 
-                    
+
+        if idx == 0:
+            seed = JointState()
+            seed.position = get_current_angle()
+            seed.name = limb_name
+            req.seed_angles.append(seed)
+           
         res = ik_client(req)  
         if res.isValid[0] == False:
             continue
@@ -41,7 +48,8 @@ def convert_pose_to_joint_plan(dmp_pose_plan,limb="right"):
             seed.name = res.joints[0].name
             req.seed_angles.append(seed)
             jointstate_list.append(res.joints[0].position)
-            
+    success_rate = float(len(jointstate_list))/len(dmp_pose_plan) 
+    rospy.loginfo("Ik success rate is %s\n" %success_rate)
     return jointstate_list
 
 

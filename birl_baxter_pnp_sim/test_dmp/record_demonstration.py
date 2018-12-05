@@ -10,7 +10,7 @@ import os,ipdb
 list_of_postfix = get_eval_postfix(dmp_cmd_fields, 'pose')
 
 dir_of_this_script = os.path.dirname(os.path.realpath(__file__))
-demonstrations_dir = os.path.join(dir_of_this_script, '..', 'data', 'new_demo')
+demonstrations_dir = os.getcwd()
 
 timeseries = []
 sample = [None]*len(list_of_postfix)

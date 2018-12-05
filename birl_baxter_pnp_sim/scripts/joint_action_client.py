@@ -183,7 +183,6 @@ class Trajectory(object):
         limb_angles = [limb_joints[joint] for joint in limb_names]
         return limb_angles
 
-
 def hmm_state_switch_client(state):
     rospy.wait_for_service('hmm_state_switch')
     try:
@@ -197,22 +196,52 @@ def hmm_state_switch_client(state):
     except rospy.ServiceException, e:
         print "Service call failed: %s"%e
 
-
-def robot_run_trajectory(limb,dmp_command_angle):
-    start_angle = dmp_command_angle[0]  
+def get_current_angle(limb="right"):
     traj = Trajectory(limb)
     limb_interface = traj._limb 
     cur_angle = [limb_interface.joint_angle(joint) for joint in limb_interface.joint_names()]
+    return cur_angle
+
+
+def get_current_pose_list(limb="right"):
+    traj = Trajectory(limb)
+    limb_interface = traj._limb 
+    current_pose_dic = limb_interface.endpoint_pose()
+    current_pose_list = [ current_pose_dic['position'].x, 
+                    current_pose_dic['position'].y,
+                    current_pose_dic['position'].z,
+                    current_pose_dic['orientation'].x,
+                    current_pose_dic['orientation'].y,
+                    current_pose_dic['orientation'].z,
+                    current_pose_dic['orientation'].w]  
+    return current_pose_list
+
+def move_to_start(start_angle,limb="right"):
+    traj = Trajectory(limb)
+    cur_angle = get_current_angle()
     start_wait_time = traj.find_start_offset(start_angle,cur_angle,speed=robot_runing_speed)
-    traj_wait_time = traj.find_offset(dmp_command_angle,speed=robot_runing_speed)
     traj.clear(limb)
     traj.add_point(cur_angle, 0.0)
     traj.add_point(start_angle,start_wait_time) 
     traj.start()
+    rospy.loginfo("MOve to dmp trajectory start\n")
     traj.wait(start_wait_time)
+
+def robot_run_trajectory(limb,dmp_command_angle,gripper_state="open"): 
+    traj = Trajectory(limb)
+    cur_angle = get_current_angle()
+    move_to_start(dmp_command_angle[0])
+    traj_wait_time = traj.find_offset(dmp_command_angle,speed=robot_runing_speed)
     for idx, command in enumerate(dmp_command_angle):
         wait_time =  traj_wait_time[idx]
         traj.add_point(command,wait_time)
     traj.start()
     traj.wait(wait_time)
+    rospy.loginfo("Finish dmp trajectory\n")
+    if gripper_state == "open":
+        traj.gripper_open()
+    elif gripper_state == "close":
+        rospy.sleep(1)
+        traj.gripper_close()
+
 
