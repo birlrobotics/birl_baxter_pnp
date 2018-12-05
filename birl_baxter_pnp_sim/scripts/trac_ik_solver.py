@@ -47,7 +47,7 @@ def convert_pose_to_joint_plan(dmp_pose_plan,limb="right"):
             seed.position = res.joints[0].position
             seed.name = res.joints[0].name
             req.seed_angles.append(seed)
-            jointstate_list.append(res.joints[0].position)
+            jointstate_list.append(res.joints[0].position[0:-1])
     success_rate = float(len(jointstate_list))/len(dmp_pose_plan) 
     rospy.loginfo("Ik success rate is %s\n" %success_rate)
     return jointstate_list
@@ -59,9 +59,9 @@ def main():
     rospy.init_node("test_trac_ik_py")
     limb = "right"
     dir_of_this_script = os.path.dirname(os.path.realpath(__file__))
-    demonstration_dir = os.path.join(dir_of_this_script, '..', 'data', 'demonstrations')
+    demonstration_dir = os.path.join(dir_of_this_script, '..', 'dmp_data', 'demonstrations')
     home_to_pre_pick = np.load(open(os.path.join(demonstration_dir, 'home_to_pre_pick.npy'), 'r'))
-    # ipdb.set_trace()
+    ipdb.set_trace()
     dmp_pose_plan = home_to_pre_pick
     joint_state = convert_pose_to_joint_plan(dmp_pose_plan,limb)
 

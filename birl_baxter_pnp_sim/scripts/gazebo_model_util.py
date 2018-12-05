@@ -102,11 +102,13 @@ def run_get_model_pose():
 
 def add_gazebo_models():
     pick_pose = list_to_pose(model_pose[0])
+
     delete_gazebo_models()
+
     load_gazebo_models(model_name=model_name[0],
-                        model_pose=pick_pose,
-                        model_type = "urdf",
-                        model_reference_frame="base")    
+                    model_pose=pick_pose,
+                    model_type = "urdf",
+                    model_reference_frame="base")   
 
 
 if __name__ == '__main__':

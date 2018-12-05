@@ -45,7 +45,7 @@ from gazebo_msgs.srv import (
 import operator
 import baxter_interface
 import ipdb
-from _constant import robot_runing_speed
+from _constant import robot_runing_speed,limb_name
 
 class Trajectory(object):
     def __init__(self, limb,verbose = False):
@@ -137,8 +137,7 @@ class Trajectory(object):
     def clear(self, limb):
         self._goal = FollowJointTrajectoryGoal()
         self._goal.goal_time_tolerance = self._goal_time_tolerance
-        self._goal.trajectory.joint_names = [limb + '_' + joint for joint in \
-            ['s0', 's1', 'e0', 'e1', 'w0', 'w1', 'w2']]
+        self._goal.trajectory.joint_names = limb_name
 
     def gripper_open(self):
         self._gripper.open()
@@ -199,7 +198,7 @@ def hmm_state_switch_client(state):
 def get_current_angle(limb="right"):
     traj = Trajectory(limb)
     limb_interface = traj._limb 
-    cur_angle = [limb_interface.joint_angle(joint) for joint in limb_interface.joint_names()]
+    cur_angle = [limb_interface.joint_angle(joint) for joint in limb_name]
     return cur_angle
 
 
