@@ -1,0 +1,46 @@
+<?xml version="1.0" ?>
+<robot name="tables" xmlns:xacro="http://www.ros.org/wiki/xacro">
+
+  <xacro:arg name="table_front" default="true"/>
+  <xacro:arg name="table_right_side" default="true"/>
+  <xacro:arg name="container" default="true"/>
+
+   <link name="world">
+</link>
+
+    <!-- Table -->
+  <xacro:if value="$(arg table_front)">
+    <xacro:include filename="$(find birl_baxter_pnp_sim)/model/table_front.xacro">
+    </xacro:include>
+    <joint name="table_fixed_1" type="fixed">
+      <origin rpy="0 0 0" xyz="0.0 0.0 -0.93"/>
+      <parent link="world"/>
+      <child link="table_front"/>
+    </joint>
+  </xacro:if>
+
+    <!-- Table -->
+  <xacro:if value="$(arg table_right_side)">
+    <xacro:include filename="$(find birl_baxter_pnp_sim)/model/table_right_side.xacro">
+    </xacro:include>
+    <joint name="table_fixed_2" type="fixed">
+      <origin rpy="0 0 -1.57" xyz="0.0 -0.2 -0.93"/>
+      <parent link="world"/>
+      <child link="table_right_side"/>
+    </joint>
+  </xacro:if>
+
+      <!-- Container -->
+  <xacro:if value="$(arg container)">
+    <xacro:include filename="$(find birl_baxter_pnp_sim)/model/container.xacro">
+    </xacro:include>
+    <joint name="container_fixed" type="fixed">
+      <origin rpy="0 0 0" xyz="-0.1 -0.95 -0.13"/>
+      <parent link="world"/>
+      <child link="container"/>
+    </joint>
+  </xacro:if>
+ 
+
+
+</robot>
