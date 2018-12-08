@@ -226,17 +226,26 @@ def move_to_start(start_angle,limb="right"):
     rospy.loginfo("MOve to dmp trajectory start\n")
     traj.wait(start_wait_time)
 
-def robot_run_trajectory(limb,dmp_command_angle,gripper_state="open"): 
+def robot_run_trajectory(limb,dmp_command_angle,gripper_state="open",point_mode=None): 
     traj = Trajectory(limb)
     cur_angle = get_current_angle()
     move_to_start(dmp_command_angle[0])
     traj_wait_time = traj.find_offset(dmp_command_angle,speed=robot_runing_speed)
-    for idx, command in enumerate(dmp_command_angle):
-        wait_time =  traj_wait_time[idx]
-        traj.add_point(command,wait_time)
-    traj.start()
-    traj.wait(wait_time)
-    rospy.loginfo("Finish dmp trajectory\n")
+    if point_mode != None:
+        rospy.loginfo("running point mode\n")
+        wait_time = traj.find_start_offset(dmp_command_angle[0],dmp_command_angle[-1],speed=robot_runing_speed)
+        traj.add_point(cur_angle,0)
+        traj.add_point(dmp_command_angle[-1],wait_time)
+        traj.start()
+        traj.wait(wait_time)
+    else:
+        for idx, command in enumerate(dmp_command_angle):
+            wait_time =  traj_wait_time[idx]
+            traj.add_point(command,wait_time)
+        traj.start()
+        traj.wait(wait_time)
+        rospy.loginfo("Runing DMP mode\n")
+
     if gripper_state == "open":
         traj.gripper_open()
     elif gripper_state == "close":

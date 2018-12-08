@@ -14,7 +14,7 @@ from _constant import limb_name
 import ipdb
 
 
-def convert_pose_to_joint_plan(dmp_pose_plan,limb="right"):
+def trac_ik(dmp_pose_plan,limb="right"):
     service_name = "/trac_ik_"+limb
     server_up = rospy.wait_for_service(service_name,timeout=5)
     
@@ -63,7 +63,7 @@ def main():
     home_to_pre_pick = np.load(open(os.path.join(demonstration_dir, 'home_to_pre_pick.npy'), 'r'))
     ipdb.set_trace()
     dmp_pose_plan = home_to_pre_pick
-    joint_state = convert_pose_to_joint_plan(dmp_pose_plan,limb)
+    joint_state = trac_ik(dmp_pose_plan,limb)
 
     print "Done"
     
