@@ -13,21 +13,24 @@ demonstration_model_dir = os.path.join(dir_of_this_script, '..', 'dmp_data', 'ne
 
 def plot_demo_list(demo_list,fig_idx = 1,label="raw data",_color="grey"):
     fig = plt.figure(fig_idx)
-    ax = fig.gca(projection='3d')
+    # ax = fig.gca(projection='3d')
     demo_list = np.array(demo_list)
     for demo in demo_list:
-        ax.plot(demo[:,0],demo[:,1],demo[:,2],color=_color)
-    ax.set_xlabel("x")
-    ax.set_ylabel("y")
-    ax.set_title(label)
+        # ax.plot(demo[:,0],demo[:,1],demo[:,2],color=_color)
+        plt.plot(demo,color=_color)
+    # ax.set_xlabel("x")
+    # ax.set_ylabel("y")
+    # plt.set_title(label)
 
-def plot_demo_after_dtw(demo_list,fig_idx=4,_color="r"):
+def plot_demo_after_dtw(demo_list,fig_idx=4,_color="r",label="after dtw"):
     fig = plt.figure(fig_idx)
-    ax = fig.gca(projection='3d')
+    # ax = fig.gca(projection='3d')
     # ipdb.set_trace()
     for demo_idx,demo in enumerate(demo_list):
         demo_np = np.array(demo)
-        ax.plot(demo_np[:,0],demo_np[:,1],demo_np[:,2],color=_color)
+        # ax.plot(demo_np[:,0],demo_np[:,1],demo_np[:,2],color=_color)
+        plt.plot(demo_np[:,0],color=_color)
+    # ax.set_title(label)
         
 def compare_two_demos(demo1, demo2):
     fig = plt.figure(10)
@@ -40,7 +43,7 @@ def compare_two_demos(demo1, demo2):
 
 
 def convert_array_to_list(array):
-    return [array[0],array[1],array[2],array[3],array[4],array[5],array[6]]
+    return [array[0]]
 
 def main():
     demo_raw_list = []
@@ -51,35 +54,39 @@ def main():
     demo_path_list = sorted(demo_path_list)
     for demo_path in demo_path_list:
         demo = np.load(demo_path, 'r')
-        filter_demo = gaussian_filter1d(demo, sigma=1)
+        demo_1d = np.copy(demo[:,0])
+        filter_demo = gaussian_filter1d(demo_1d, sigma=1)
         demo_gird = np.linspace(0,1,len(filter_demo))
         norm_grid = np.linspace(0,1,200)
         norm_demo = griddata(demo_gird, filter_demo, norm_grid, method='linear')
-        demo_raw_list.append(demo)
+        demo_raw_list.append(demo_1d)
         demo_filter_list.append(filter_demo)
         demo_norm_list.append(norm_demo)
    
 
-    orig_demo = demo_norm_list[0]
+    orig_demo = np.array(demo_norm_list[0]).reshape(-1, 1)
     after_dtw_demo_list = []
     after_dtw_demo_list_orig = []
-    for norm_demo in demo_norm_list:
+
+    for demo in demo_norm_list:
         after_dtw_demo = []
         after_dtw_demo_orig = []
-        dist, cost, acc, path = dtw.dtw(orig_demo,norm_demo, dist=lambda x, y: np.linalg.norm(x - y, ord=2))
         
+        demo = np.array(demo).reshape(-1, 1)
+        dist, cost, acc, path = dtw.dtw(orig_demo,demo, dist=lambda x, y: np.linalg.norm(x - y, ord=1))
+        ipdb.set_trace()
         for idx in path[0]:
             list_ = convert_array_to_list(orig_demo[idx])
             lisT = np.copy(list_)
             after_dtw_demo_orig.append(lisT)
-
+        
         for idx in path[1]:
-            list_ = convert_array_to_list(norm_demo[idx])
+            list_ = convert_array_to_list(demo[idx])
             lisT = np.copy(list_)
             after_dtw_demo.append(lisT)
         after_dtw_demo_list.append(after_dtw_demo)
         after_dtw_demo_list_orig.append(after_dtw_demo_orig)
-    # ipdb.set_trace()
+    
     plot_demo_list(demo_raw_list)
     plot_demo_list(demo_filter_list,fig_idx=2,label="filterd data",_color="g")
     plot_demo_list(demo_norm_list,fig_idx=3,label="normed data",_color="b")

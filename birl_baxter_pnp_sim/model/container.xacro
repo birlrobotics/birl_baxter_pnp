@@ -4,13 +4,13 @@
     <visual>
       <origin rpy="0 0 0" xyz="0 0 0"/>
       <geometry>
-        <mesh filename="package://birl_baxter_description/meshes/container/container.STL"/>
+        <mesh filename="package://birl_baxter_description/meshes/container/container.stl"/>
       </geometry>
     </visual>
     <collision>
       <origin rpy="0 0 0" xyz="0 0 0"/>
       <geometry>
-        <mesh filename="package://birl_baxter_description/meshes/container/container.STL"/>
+        <mesh filename="package://birl_baxter_description/meshes/container/container.stl"/>
       </geometry>
     </collision>
     <inertial>
